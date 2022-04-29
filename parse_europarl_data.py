@@ -1,3 +1,5 @@
+import numpy as np
+
 def read_tokens_file(token_path, num_sentences):
     """
     Reads in a token file path and returns the data, limited to the number of sentences.
@@ -59,6 +61,7 @@ def read_alignments_file(alignment_path, num_sentences):
                 break
 
             pairs = [p.split("-") for p in line.split()]
+            pairs = np.array(pairs).astype(int)
             alignments.append(pairs)
 
     return alignments
@@ -72,7 +75,7 @@ def create_parallel_sentences(token_files, alignment_files, num_sentences=15):
         Array of file paths to files containing cleaned tokenized data.
     :param alignment_files:
         Array of file paths to alignment files.
-    :return: array 3-tuples, one tuple for each token - alignment pair
+    :return: 3-tuple
         ( array of tokenized sentences in language 1,
         array of tokenized sentences in language 2,
         array of sentence token alignments
@@ -87,6 +90,6 @@ def create_parallel_sentences(token_files, alignment_files, num_sentences=15):
     for token_path, align_path in zip(token_files, alignment_files):
         tokens_1, tokens_2 = read_tokens_file(token_path, num_sentences)
         alignments = read_alignments_file(align_path, num_sentences)
-        data.append((tokens_1, tokens_2, alignments))
+        data.extend((tokens_1, tokens_2, alignments))
 
     return data

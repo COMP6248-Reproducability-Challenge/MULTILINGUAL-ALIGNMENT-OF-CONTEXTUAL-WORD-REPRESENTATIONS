@@ -1,12 +1,21 @@
 import torch
 
 from BaseBertWrapper import BaseBertWrapper
-
-
+from parse_europarl_data import create_parallel_sentences
+from evaluation import compute_word_retrieval_acc
 
 if __name__ == "__main__":
-    # TODO: implement XNLI pipeline for BaseBert
     wrapper = BaseBertWrapper('bert-base-multilingual-cased', do_lower_case=False)
 
+    tokens_files = ["data/data/europarl-v7.bg-en.token.clean.reverse"]
+    alignment_files = ["data/data/europarl-v7.bg-en.intersect.reverse"]
+
+    data = create_parallel_sentences(tokens_files, alignment_files)
+
+    feature_data = wrapper.get_bert_data(data[0])
+
+
+
+    print()
 
 
