@@ -90,12 +90,12 @@ def create_parallel_sentences(token_files, alignment_files, num_sentences=10):
     for token_path, align_path in zip(token_files, alignment_files):
         tokens_1, tokens_2 = read_tokens_file(token_path, num_sentences)
         alignments = read_alignments_file(align_path, num_sentences)
-        data.extend((tokens_1, tokens_2, alignments))
+        data.append((tokens_1, tokens_2, alignments))
 
     return data
 
 
-def displace_alignments(data, has_bert_sep=True, include_seps=False):
+def displace_alignments(data, has_bert_sep=True, include_seps=True):
     """
     Displace the alignments in order to get them to match a squeezed version of the words.
     :param data: the data containing the sentences and alignments
@@ -111,8 +111,8 @@ def displace_alignments(data, has_bert_sep=True, include_seps=False):
         if has_bert_sep:
             if include_seps:
                 aligned_features.append([displacement_1, displacement_2])
-            displacement_1+=1
-            displacement_2+=1
+            displacement_1 += 1
+            displacement_2 += 1
 
         for entry in alignment:
             aligned_features.append([entry[0] + displacement_1, entry[1] + displacement_2])
