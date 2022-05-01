@@ -27,9 +27,13 @@ def compute_word_retrieval_acc(wrapper, language_source, data, language_target="
 
     idx_features_1, idx_features_2 = displace_alignments(data)
 
-    feature_datal1 = wrapper.get_bert_data(data[0])[idx_features_1]
-    feature_datal2 = wrapper.get_bert_data(data[1])[idx_features_2]
+    feature_datal1 = wrapper.get_bert_data(data[0]).detach().numpy()[idx_features_1]
+    feature_datal2 = wrapper.get_bert_data(data[1]).detach().numpy()[idx_features_2]
 
     acc_source_target, acc_target_source = get_accuracy(feature_datal1, feature_datal2)
     print(f"Accuracy from {language_source} to {language_target}: {acc_source_target}")
     print(f"Accuracy from {language_target} to {language_source}: {acc_target_source}")
+
+
+def compute_xnli_cross_lingual_transfer(dataset):
+    return 0
