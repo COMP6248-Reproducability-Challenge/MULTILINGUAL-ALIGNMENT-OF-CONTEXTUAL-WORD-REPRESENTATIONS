@@ -11,8 +11,7 @@ if __name__ == "__main__":
     alignment_files = ["data/data/europarl-v7.bg-en.intersect.reverse"]
 
     data = create_parallel_sentences(tokens_files, alignment_files)
-
-    feature_data = wrapper.get_bert_data(data[0])
+    compute_word_retrieval_acc(wrapper, "bg", data)
 
 
 

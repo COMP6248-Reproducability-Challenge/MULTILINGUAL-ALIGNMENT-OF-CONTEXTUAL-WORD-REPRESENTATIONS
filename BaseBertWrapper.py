@@ -3,7 +3,7 @@ from transformers import BertTokenizer, BertModel, BertConfig, BertTokenizerFast
 
 
 class BaseBertWrapper():
-    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=True):
+    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=False):
         self.tokenizer = BertTokenizer.from_pretrained(bert_model, do_lower_case=do_lower_case)
         self.fast_tokenizer = BertTokenizerFast.from_pretrained(bert_model, do_lower_case=do_lower_case)
         self.bert = BertModel.from_pretrained(bert_model, output_hidden_states=output_hidden_states)
@@ -60,4 +60,4 @@ class BaseBertWrapper():
         if total_features.size()[0] != sum([(len(s) + 2) for s in corpus]):
             raise Exception("Number of feature vectors does not match number of total tokens in the corpus")
 
-        return total_features
+        return total_features.detach().numpy()
