@@ -26,7 +26,7 @@ def get_neighbourhoods_mean_sim(e1, e2, k=10):
     :return:
     """
     matrix_sim = get_matrix_cos_sim(e1, e2)
-    return np.mean(-np.sort(-matrix_sim, axis=1)[:, :k], axis=1), np.mean(-np.sort(-matrix_sim.T, axis=1)[:, :k], axis=1)
+    return np.mean(np.sort(matrix_sim, axis=1)[:, -k:], axis=1), np.mean(np.sort(matrix_sim.T, axis=1)[:, -k:], axis=1)
 
 
 def csls_bulk(e_1, e_space_2, r_e1, r_space_2):
@@ -38,4 +38,4 @@ def csls_bulk(e_1, e_space_2, r_e1, r_space_2):
     :param r_space_2: list of mean similarities of embeddings in vector space 2
     :return:
     """
-    return 2 * get_matrix_cos_sim(e_1, e_space_2) - r_e1 - r_space_2
+    return np.argsort(-(2 * get_matrix_cos_sim(e_1, e_space_2) - r_e1 - r_space_2))[0]

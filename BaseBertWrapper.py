@@ -4,13 +4,16 @@ from transformers import BertTokenizer, BertModel, BertConfig, BertTokenizerFast
 
 
 class BaseBertWrapper(nn.Module):
-    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=False):
+    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=False, cuda=False):
         super().__init__()
         self.tokenizer = BertTokenizer.from_pretrained(bert_model, do_lower_case=do_lower_case)
         self.fast_tokenizer = BertTokenizerFast.from_pretrained(bert_model, do_lower_case=do_lower_case)
         self.bert = BertModel.from_pretrained(bert_model, output_hidden_states=output_hidden_states)
         if init_w:
             self.bert.init_weights()
+
+        if cuda:
+            self.cuda()
 
     def split_sentence_into_tokens(self, sentence, includes_sep=False):
         tokens = []
@@ -64,5 +67,5 @@ class BaseBertWrapper(nn.Module):
 
         return total_features
 
-    def forward(self):
-        pass
+    def forward(self, x):
+        return self.get_bert_data(x)

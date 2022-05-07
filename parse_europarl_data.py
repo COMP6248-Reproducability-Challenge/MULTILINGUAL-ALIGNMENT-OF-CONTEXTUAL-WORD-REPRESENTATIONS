@@ -108,15 +108,18 @@ def displace_alignments(data, has_bert_sep=True, include_seps=True):
     displacement_2 = 0
 
     for idx, alignment in enumerate(data[2]):
+        # include the [CLS] tokens if required
         if has_bert_sep:
             if include_seps:
                 aligned_features.append([displacement_1, displacement_2])
             displacement_1 += 1
             displacement_2 += 1
 
+        # for each alignment word
         for entry in alignment:
             aligned_features.append([entry[0] + displacement_1, entry[1] + displacement_2])
 
+        # include the [SEP] tokens if required
         if has_bert_sep and len(alignment) > 0:
             displacement_1 += 1
             displacement_2 += 1
