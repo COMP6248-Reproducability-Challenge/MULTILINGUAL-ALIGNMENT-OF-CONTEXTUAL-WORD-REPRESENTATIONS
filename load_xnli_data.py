@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 
 
-def load_prepare_nli(wrapper, data):
+def load_prepare_nli(wrapper, data, language_code=None, language_index=None):
     max_len = 128
 
     labels_ar = []
@@ -12,8 +12,12 @@ def load_prepare_nli(wrapper, data):
 
     for ex in tqdm(data):
         # 'ex' is a python dictionary
-        premise = ex['premise'].numpy().decode('utf-8')
-        hypothesis = ex['hypothesis'].numpy().decode('utf-8')
+        if language_code is not None:
+            premise = ex['premise'][language_code].numpy().decode('utf-8')
+            hypothesis = ex['hypothesis']['translation'][language_index].numpy().decode('utf-8')
+        else:
+            premise = ex['premise'].numpy().decode('utf-8')
+            hypothesis = ex['hypothesis'].numpy().decode('utf-8')
 
         encoded_dict = wrapper.tokenizer.encode_plus(premise, hypothesis,
                                                      max_length=max_len,

@@ -11,7 +11,7 @@ from LinearClassifier import LinearClassifier
 from load_xnli_data import load_prepare_nli
 
 
-def train_classifier(wrapper, clf, train_dataloader, use_cuda=False):
+def train_classifier(clf, train_dataloader, use_cuda=False):
     preds = []
     true_labels = []
     loss_list = []
@@ -72,6 +72,7 @@ def predict_classifier(clf, test_dataloader, use_cuda=False):
     flat_true_labels = np.concatenate(true_labels, axis=0)
 
     acc = (flat_predictions == flat_true_labels).mean()
+    return acc
 
 
 def xnli_pipeline(wrapper, data_train, data_test, use_cuda=False):
@@ -87,7 +88,12 @@ def xnli_pipeline(wrapper, data_train, data_test, use_cuda=False):
     lc.train()
 
     # train the linear classifier
-    lc = train_classifier(wrapper, lc, train_dataloader, use_cuda=True)
+    lc = train_classifier(wrapper, lc, train_dataloader, use_cuda=False)
+
+    input_ids_val, attn_masks_val, segment_ids_val, labels_val = load_prepare_nli(wrapper, data_test, language_code='en', language_index=4)
+    test_dataset = TensorDataset(input_ids_val, attn_masks_val, segment_ids_val, labels_val)
+    test_dataloader = DataLoader(test_dataset, batch_size=32)
+    print(predict_classifier(lc, test_dataloader))
 
 
 
