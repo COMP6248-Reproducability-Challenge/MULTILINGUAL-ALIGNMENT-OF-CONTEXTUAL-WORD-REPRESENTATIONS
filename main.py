@@ -22,9 +22,9 @@ if __name__ == "__main__":
     alignment_files = ["data/data/europarl-v7.bg-en.intersect.reverse"]
 
     data = create_parallel_sentences(tokens_files, alignment_files, num_sentences=np.inf)
-    num_test = 0
-    num_dev = 100
-    num_train = 200
+    num_test = 1024
+    num_dev = 2048
+    num_train = 252048
     train = []
     dev = []
     test = []
@@ -36,6 +36,7 @@ if __name__ == "__main__":
     wrapper_aligned = align_pretrained_embeddings(wrapper_aligned, wrapper, train, languages, num_sent_train=100)
 
     for language, lang_data in zip(languages, dev):
+        compute_word_retrieval_acc(wrapper, language, lang_data)
         compute_word_retrieval_acc(wrapper_aligned, language, lang_data)
 
     xnli_data = tfds.load(name='xnli', split='test')
