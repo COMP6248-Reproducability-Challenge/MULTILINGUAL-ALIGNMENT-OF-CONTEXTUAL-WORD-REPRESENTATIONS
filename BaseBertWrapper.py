@@ -1,14 +1,26 @@
 import torch
 import torch.nn as nn
-from transformers import BertTokenizer, BertModel, BertConfig, BertTokenizerFast
+from tqdm import tqdm
+from transformers import BertTokenizer, BertModel, BertTokenizerFast
+from pytorch_pretrained_bert import BertTokenizer as torchBertTokenizer, BertModel as torchBertModel
 
 
 class BaseBertWrapper(nn.Module):
-    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=False, cuda=False):
+    def __init__(self, bert_model, do_lower_case, output_hidden_states=False, init_w=False, cuda=False, pytorch_pretrained=False):
         super().__init__()
-        self.tokenizer = BertTokenizer.from_pretrained(bert_model, do_lower_case=do_lower_case)
+
         self.fast_tokenizer = BertTokenizerFast.from_pretrained(bert_model, do_lower_case=do_lower_case)
-        self.bert = BertModel.from_pretrained(bert_model, output_hidden_states=output_hidden_states)
+
+        if pytorch_pretrained:
+            self.bert = torchBertModel.from_pretrained(bert_model)
+            self.tokenizer = torchBertTokenizer.from_pretrained(bert_model, do_lower_case=do_lower_case)
+        else:
+            self.bert = BertModel.from_pretrained(bert_model, output_hidden_states=output_hidden_states)
+            self.tokenizer = BertTokenizer.from_pretrained(bert_model, do_lower_case=do_lower_case)
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() and cuda else "cpu")
+        self.uses_pytorch_v = pytorch_pretrained
+
         if init_w:
             self.bert.init_weights()
 
@@ -51,14 +63,19 @@ class BaseBertWrapper(nn.Module):
             sent_mask.append(int(attention_mask[ir][-1] == 1))
             word_end_mask.append(sent_mask)
 
-        return torch.IntTensor(input_ids), torch.IntTensor(attention_mask), torch.IntTensor(word_end_mask)
+        return torch.IntTensor(input_ids).to(self.device), torch.IntTensor(attention_mask).to(self.device), torch.IntTensor(word_end_mask).to(self.device)
 
     def get_bert_data(self, corpus, batch_size=128):
-        total_features = torch.Tensor([])
-        for i in range(0, len(corpus), batch_size):
+        total_features = torch.Tensor([]).to(self.device)
+        for i in tqdm(range(0, len(corpus), batch_size)):
             input_ids, att_mask, word_end_mask = self.parse_sentences_to_bert(corpus[i:i+batch_size])
 
-            features = self.bert(input_ids, attention_mask=att_mask)["last_hidden_state"]
+            if self.uses_pytorch_v:
+                features, _ = self.bert(input_ids, attention_mask=att_mask, output_all_encoded_layers=False)
+                del _
+            else:
+                features = self.bert(input_ids, attention_mask=att_mask)["last_hidden_state"]
+
             features_packed = features.masked_select(word_end_mask.to(torch.bool).unsqueeze(-1)).reshape(-1, features.shape[-1])
             total_features = torch.cat((total_features, features_packed), dim=0)
 
