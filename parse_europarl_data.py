@@ -95,7 +95,7 @@ def create_parallel_sentences(token_files, alignment_files, num_sentences=10):
     return data
 
 
-def displace_alignments(data, has_bert_sep=True, include_seps=True):
+def displace_alignments(data, has_bert_sep=True, include_seps=True, return_words=False):
     """
     Displace the alignments in order to get them to match a squeezed version of the words.
     :param data: the data containing the sentences and alignments
@@ -104,6 +104,9 @@ def displace_alignments(data, has_bert_sep=True, include_seps=True):
     :return: list indices of the aligned words in lang 1 and list indices of the aligned words in lang 2
     """
     aligned_features = []
+    w1 = []
+    w2 = []
+
     displacement_1 = 0
     displacement_2 = 0
 
@@ -112,12 +115,21 @@ def displace_alignments(data, has_bert_sep=True, include_seps=True):
         if has_bert_sep:
             if include_seps:
                 aligned_features.append([displacement_1, displacement_2])
+
+                if return_words:
+                    w1.append("[CLS]")
+                    w2.append("[CLS]")
+
             displacement_1 += 1
             displacement_2 += 1
 
         # for each alignment word
         for entry in alignment:
             aligned_features.append([entry[0] + displacement_1, entry[1] + displacement_2])
+
+        if return_words:
+            w1.extend(data[0][idx])
+            w2.extend(data[1][idx])
 
         # include the [SEP] tokens if required
         if has_bert_sep and len(alignment) > 0:
@@ -126,8 +138,17 @@ def displace_alignments(data, has_bert_sep=True, include_seps=True):
             if include_seps:
                 aligned_features.append([entry[0] + displacement_1, entry[1] + displacement_2])
 
+                if return_words:
+                    w1.append("[SEP]")
+                    w2.append("[SEP]")
+
         displacement_1 += len(data[0][idx])
         displacement_2 += len(data[1][idx])
 
     aligned_features = np.array(aligned_features)
+    if return_words:
+        return aligned_features[:, 0], aligned_features[:, 1], w1, w2
+
     return aligned_features[:, 0], aligned_features[:, 1]
+
+

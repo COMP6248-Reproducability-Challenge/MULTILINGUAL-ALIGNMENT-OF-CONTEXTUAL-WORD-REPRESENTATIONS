@@ -38,4 +38,4 @@ def csls_bulk(e_1, e_space_2, r_e1, r_space_2):
     :param r_space_2: list of mean similarities of embeddings in vector space 2
     :return:
     """
-    return np.argsort(-(2 * get_matrix_cos_sim(e_1, e_space_2) - r_e1 - r_space_2))[0]
+    return (2 * get_matrix_cos_sim(e_1, e_space_2) - r_e1 - r_space_2)
