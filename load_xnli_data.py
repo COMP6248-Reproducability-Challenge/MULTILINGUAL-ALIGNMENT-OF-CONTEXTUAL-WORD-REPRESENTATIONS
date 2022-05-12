@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 
 
+# Inspired by ChrisMcCormick AI (2020) - https://youtu.be/mGdg_iPoXTs
 def load_prepare_nli(wrapper, data, language_code=None, language_index=None):
     max_len = 128
 
