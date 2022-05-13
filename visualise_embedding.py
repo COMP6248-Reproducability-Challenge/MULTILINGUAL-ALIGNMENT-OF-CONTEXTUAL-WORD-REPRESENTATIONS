@@ -3,94 +3,106 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from tqdm import tqdm
 
 from BaseBertWrapper import BaseBertWrapper
+from parse_europarl_data import create_parallel_sentences, displace_alignments
+
+fig = 0
+
+def tsne_data(data):
+    tsne_model = TSNE(n_components=2, init='pca', n_iter=2500, random_state=42)
+    return tsne_model.fit_transform(data)
 
 
-def get_bert_tokens(sentence, tokenizer):
-    tokenized_text = tokenizer.tokenize(sentence)
-    indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_text)
-    segments_ids = [1] * len(indexed_tokens)
-
-    tokens_tensor = torch.tensor([indexed_tokens])
-    segments_tensors = torch.tensor([segments_ids])
-
-    return tokenized_text, tokens_tensor, segments_tensors
-
-
-def get_word_representations(hidden_states):
-    token_embeddings = torch.stack(hidden_states, dim=0)
-    token_embeddings = torch.squeeze(token_embeddings, dim=1)
-    token_embeddings = token_embeddings.permute(1, 0, 2)
-
-    token_vecs_sum = []
-    for token in token_embeddings:
-        sum_vec = torch.sum(token[-4:], dim=0).numpy()
-        token_vecs_sum.append(sum_vec)
-
-    return token_vecs_sum
-
-
-def get_word_vectors(sentence, wrapper):
-    tokenized_text, tokens_tensor, segments_tensors = get_bert_tokens(sentence, wrapper.tokenizer)
-    outputs = wrapper.bert(tokens_tensor, segments_tensors)
-    hidden_states = outputs['hidden_states']
-    word_vecs = get_word_representations(hidden_states)
-
-    # remove the BERT tokens
-    return tokenized_text[1:-1], word_vecs[1:-1]
-
-
-def visualise_words(tsne_data, datasets):
+def plot_data(datasets):
+    global fig
     plt.figure(figsize=(8, 8))
-    colors = cm.rainbow(np.linspace(0, 1, len(datasets)))
-    markers = ["o", "s", "D"]
+    colors = ["r", "b"]
+    markers = ["o", "v", "X", "s", "^"]
 
-    tsne_model = TSNE(n_components=2, init='pca', n_iter=2500, random_state=23)
-    transformed_values = tsne_model.fit_transform(tsne_data)
+    for ds_index, dataset in enumerate(datasets):
 
-    for ds_index, (tokens, vectors) in enumerate(datasets):
+        # for each embedding of a word
+        for idw, (values, word) in enumerate(dataset):
+            x = []
+            y = []
+            for coords in values:
+                x.append(coords[0])
+                y.append(coords[1])
 
-        # TODO: some sort of function that finds the transformed values from the tsne output
-        new_values = []
+            plt.scatter(x, y, color=colors[idw], marker=markers[ds_index], label=word)
 
-        x = []
-        y = []
-        for value in new_values:
-            x.append(value[0])
-            y.append(value[1])
-
-        for i in range(len(x)):
-            plt.scatter(x[i], y[i], color=colors[ds_index], marker=markers[ds_index])
-            plt.annotate(tokens[i], xy=(x[i], y[i]), xytext=(5, 2), textcoords='offset points', ha='right', va='bottom')
-
+    plt.legend()
+    plt.savefig(f"word_embeddings_{fig}.png")
+    fig += 1
     plt.show()
 
 
 if __name__ == "__main__":
     wrapper = BaseBertWrapper('bert-base-multilingual-cased', do_lower_case=False)
-    wrapper.bert.eval()
+    wrapper_aligned = BaseBertWrapper('bert-base-multilingual-cased', do_lower_case=False)
 
-    texts = ["bank",
-             "The river bank was flooded.",
-             "The bank vault was robust.",
-             "He had to bank on her for support.",
-             "The bank was out of money.",
-             "The bank teller was a man."]
+    wrapper.eval()
+    wrapper_aligned.eval()
 
-    datasets = []
+    words = [("Jahr", "year"), ("wollte", "wanted"), ("Frage", "question"), ("Ich", "I"), ("Gelegenheit", "opportunity")]
 
-    with torch.no_grad():
-        labels, vectors = [], []
+    languages = ["de"]
+    for lan in languages:
+        tokens_files = [f"data/data/europarl-v7.{lan}-en.token.clean.reverse"]
+        alignment_files = [f"data/data/europarl-v7.{lan}-en.intersect.reverse"]
 
-        for idx, text in enumerate(texts):
-            tokens, word_vecs = get_word_vectors("[CLS] " + text + " [SEP]", wrapper)
+        data = create_parallel_sentences(tokens_files, alignment_files, num_sentences=5000)[0]
+        num_test = 1024
+        data = (data[0][:num_test], data[1][:num_test], data[2][:num_test])
 
-            labels.append(f"bank-{idx}")
-            vectors.append(word_vecs[tokens.index('bank')])
+        embeddings_l1 = []
+        embeddings_l2 = []
 
-        datasets.append((labels, vectors))
+        idx_features_1, idx_features_2, w1, w2 = displace_alignments(data, return_words=True)
 
-    visualise_words(
-        datasets
-    )
+        with torch.no_grad():
+            e1 = wrapper(data[0]).detach().cpu().numpy()[idx_features_1]
+            e2 = wrapper(data[1]).detach().cpu().numpy()[idx_features_2]
+
+            e1_aligned = wrapper_aligned(data[0]).detach().cpu().numpy()[idx_features_1]
+            e2_aligned = wrapper_aligned(data[1]).detach().cpu().numpy()[idx_features_2]
+
+            words_1 = np.array(w1)[idx_features_1]
+            words_2 = np.array(w2)[idx_features_2]
+
+        l1_tsne = tsne_data(np.concatenate(e1, e1_aligned))
+        l2_tsne = tsne_data(np.concatenate(e2, e2_aligned))
+
+        e1_tsne = l1_tsne[:len(e1)]
+        e1_tsne_aligned = l1_tsne[len(e1):]
+
+        e2_tsne = l2_tsne[:len(e2)]
+        e2_tsne_aligned = l2_tsne[len(e2):]
+
+        plotted_data = []
+        plotted_data_algined = []
+
+        for (word_1, word_2) in words:
+            emb_w1 = e1_tsne[np.where(words_1 == word_1)[0]]
+            emb_w2 = e2_tsne[np.where(words_2 == word_2)[0]]
+
+            emb_w1_aligned = e1_tsne_aligned[np.where(words_1 == word_1)[0]]
+            emb_w2_aligned = e2_tsne_aligned[np.where(words_2 == word_2)[0]]
+
+            plotted_data.append( [
+                    (emb_w1, word_1),
+                    (emb_w2, word_2)
+                ]
+            )
+
+            plotted_data_algined.append([
+                (emb_w1_aligned, word_1),
+                (emb_w2_aligned, word_2)
+            ]
+            )
+
+        plot_data(plotted_data)
+        plot_data(plotted_data_algined)
+        print()
